@@ -11,7 +11,8 @@
     "build:umd:min":
       "cross-env BABEL_ENV=es NODE_ENV=production rollup -c -o dist/redux-utilities.min.js",
     "build": "npm run build:umd && npm run build:umd:min",
-    "lint": "eslint src/** --fix"
+    "lint": "eslint src/** --fix",
+    "prepublishOnly": "npm run build"
   },
   "repository": {
     "type": "git",
