@@ -34,13 +34,12 @@
     "rollup-plugin-replace": "^2.0.0",
     "rollup-plugin-uglify": "^3.0.0",
     "babel-plugin-transform-object-rest-spread": "^6.26.0",
-    "babel-preset-env": "^1.6.1"
+    "babel-preset-env": "^1.6.1",
+    "eslint": "^4.16.0",
+    "jest": "^22.1.4"
   },
   "dependencies": {
-    "eslint": "^4.16.0",
     "hoist-non-react-statics": "^2.3.1",
-    "jest": "^22.1.4",
-    "react": "^16.2.0",
     "yup": "^0.24.0"
   },
   "jest": {
