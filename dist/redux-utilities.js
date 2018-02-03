@@ -25,7 +25,7 @@ function reduce(fn, initialValue, list) {
 }
 
 function validate(schema, data, options) {
-  var error = void 0;
+  let error;
   try {
     schema.validateSync(data, options);
   } catch (e) {
@@ -45,22 +45,20 @@ function validate(schema, data, options) {
  * @param {string[]} [defaultTypes] - Types to be concatinated with passed types
  * @return Object
  */
-function makeType(prefix, types) {
-  var defaultTypes = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : [];
-
-  return reduce(function (dict, type) {
-    var _Object$assign;
-
-    return Object.assign((_Object$assign = {}, _Object$assign[type] = prefix + '_' + type, _Object$assign), dict);
-  }, {}, concat(types, defaultTypes));
+function makeType(prefix, types, defaultTypes = []) {
+  return reduce(
+    (dict, type) => Object.assign({ [type]: `${prefix}_${type}` }, dict),
+    {},
+    concat(types, defaultTypes)
+  );
 }
 
-var yup = require('yup');
+const yup = require('yup');
 
-var schema = yup.object().shape({
+const schema = yup.object().shape({
   key: yup.string().required(),
   cases: yup.object().required(),
-  initialState: yup.object()
+  initialState: yup.object(),
 });
 
 /**
@@ -68,17 +66,12 @@ var schema = yup.object().shape({
  * @param  {Object} [initialState={}]
  * @return {(state: Object, action: Object): Object} basic reducer
  */
-function createReducer(cases) {
-  var initialState = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
-
-  return function () {
-    var state = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : initialState;
-    var action = arguments[1];
-
+function createReducer(cases, initialState = {}) {
+  return (state = initialState, action) => {
     if (cases[action.type] === undefined) {
       return state;
     }
-    var newState = cases[action.type](state, action);
+    const newState = cases[action.type](state, action);
     return Object.assign({}, state, newState);
   };
 }
@@ -88,7 +81,7 @@ function createReducer(cases) {
  * @return {[key, reducer]} - reducer config that should be flatten with `flattenReducers`
  */
 function applyReducer(reducer) {
-  var error = validate(schema, reducer);
+  const error = validate(schema, reducer);
   if (error) {
     throw new Error(error.message);
   }
@@ -101,8 +94,8 @@ function applyReducer(reducer) {
  * @param {(() => promise)[]} actions - Actions to be ran
  */
 async function runActionsSeq(handler, actions, shouldNotify) {
-  var action = actions.shift();
-  var resp = await action();
+  const action = actions.shift();
+  const resp = await action();
   if (resp._error && shouldNotify) {
     handler.open(resp);
   }
@@ -115,8 +108,8 @@ async function runActionsSeq(handler, actions, shouldNotify) {
  * @param {promise[]} actions - Actions to be ran
  */
 async function runActionsAsync(handler, actions, shouldNotify) {
-  var reqs = await Promise.all(actions);
-  reqs.map(function (resp) {
+  const reqs = await Promise.all(actions);
+  reqs.map(resp => {
     if (resp._error && shouldNotify) {
       handler.open(resp);
     }
@@ -148,16 +141,14 @@ async function runActionsAsync(handler, actions, shouldNotify) {
  * @param {bool} [shouldNotify=true] - Whether handler should be called if error occurs
  * @return {Functions}
  */
-function runActions(handler) {
-  var shouldNotify = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : true;
-
+function runActions(handler, shouldNotify = true) {
   if (typeof handler.open !== 'function') {
     throw TypeError('Expected handler.open to be a function');
   }
-  return function (actions) {
-    var isSync = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : false;
-    return isSync ? runActionsSeq(handler, actions, shouldNotify) : runActionsAsync(handler, actions, shouldNotify);
-  };
+  return (actions, isSync = false) =>
+    isSync
+      ? runActionsSeq(handler, actions, shouldNotify)
+      : runActionsAsync(handler, actions, shouldNotify);
 }
 
 /**
@@ -166,21 +157,119 @@ function runActions(handler) {
  * @param {[string, Function][]} reducers
  */
 function flattenReducers(reducers) {
-  return reduce(function (dict, entry) {
-    var key = entry[0],
-        handler = entry[1];
-    // Normally we'd use Object.assign, but here it would slow it down, and we don't care about overrides
-    // eslint-disable-next-line
-
-    dict[key] = handler;
-    return dict;
-  }, {}, reducers);
+  return reduce(
+    (dict, entry) => {
+      const [key, handler] = entry;
+      // Normally we'd use Object.assign, but here it would slow it down, and we don't care about overrides
+      // eslint-disable-next-line
+      dict[key] = handler;
+      return dict;
+    },
+    {},
+    reducers
+  );
 }
+
+/**
+ * Copyright 2015, Yahoo! Inc.
+ * Copyrights licensed under the New BSD License. See the accompanying LICENSE file for terms.
+ */
+var REACT_STATICS = {
+    childContextTypes: true,
+    contextTypes: true,
+    defaultProps: true,
+    displayName: true,
+    getDefaultProps: true,
+    mixins: true,
+    propTypes: true,
+    type: true
+};
+
+var KNOWN_STATICS = {
+  name: true,
+  length: true,
+  prototype: true,
+  caller: true,
+  callee: true,
+  arguments: true,
+  arity: true
+};
+
+var defineProperty = Object.defineProperty;
+var getOwnPropertyNames = Object.getOwnPropertyNames;
+var getOwnPropertySymbols = Object.getOwnPropertySymbols;
+var getOwnPropertyDescriptor = Object.getOwnPropertyDescriptor;
+var getPrototypeOf = Object.getPrototypeOf;
+var objectPrototype = getPrototypeOf && getPrototypeOf(Object);
+
+var hoistNonReactStatics = function hoistNonReactStatics(targetComponent, sourceComponent, blacklist) {
+    if (typeof sourceComponent !== 'string') { // don't hoist over string (html) components
+
+        if (objectPrototype) {
+            var inheritedComponent = getPrototypeOf(sourceComponent);
+            if (inheritedComponent && inheritedComponent !== objectPrototype) {
+                hoistNonReactStatics(targetComponent, inheritedComponent, blacklist);
+            }
+        }
+
+        var keys = getOwnPropertyNames(sourceComponent);
+
+        if (getOwnPropertySymbols) {
+            keys = keys.concat(getOwnPropertySymbols(sourceComponent));
+        }
+
+        for (var i = 0; i < keys.length; ++i) {
+            var key = keys[i];
+            if (!REACT_STATICS[key] && !KNOWN_STATICS[key] && (!blacklist || !blacklist[key])) {
+                var descriptor = getOwnPropertyDescriptor(sourceComponent, key);
+                try { // Avoid failures from read-only properties
+                    defineProperty(targetComponent, key, descriptor);
+                } catch (e) {}
+            }
+        }
+
+        return targetComponent;
+    }
+
+    return targetComponent;
+};
+
+/**
+ * @param  {Object} [actions] - actions that will be passed fetch and dispatch functions
+ * @param  {Object} [props] - props taken from redux connect
+ * @return {Object} - activated actions
+ */
+
+/**
+ * @param {Function} [mapFn] - function that will be applied to get actions
+ * @param {Object} [actions] - all of the actions that the <code>mapFn</code> will be applied to
+ * @param {Function} backEndConf - Function that the token will be passed to.
+ * @param {Function} createElement - Function that will create the element
+ * @param {ReactElement} [Comp] - Component to wrap
+ * @return {(props) => ReactElement}
+ */
+const withMappedActions = (
+  mapFn,
+  actions,
+  backEndConf,
+  createElement
+) => Component => {
+  const compName = Component.displayName || Component.name;
+  const WrapperComp = props =>
+    createElement(
+      Component,
+      Object.assign({}, props, { actions: mapFn(actions, props, backEndConf) })
+    );
+  WrapperComp.WrappedComponent = Component;
+  WrapperComp.displayName = `withMappedActions(${compName})`;
+  return hoistNonReactStatics(WrapperComp, Component);
+};
 
 exports.makeType = makeType;
 exports.applyReducer = applyReducer;
 exports.runActions = runActions;
 exports.flattenReducers = flattenReducers;
+exports.withMappedActions = withMappedActions;
 
 Object.defineProperty(exports, '__esModule', { value: true });
 

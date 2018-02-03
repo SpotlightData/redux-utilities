@@ -1,4 +1,3 @@
-import React from 'react';
 import hoistStatics from 'hoist-non-react-statics';
 
 /**
@@ -26,16 +25,25 @@ export function mapActionsToBackend(actions, props, backEndConf) {
   }, {});
 }
 /**
- * @param  {Function} [mapFn] - function that will be applied to get actions
- * @param  {Object} [actions] - all of the actions that the <code>mapFn</code> will be applied to
- * @param  {ReactElement} [Comp] - Component to wrap
+ * @param {Function} [mapFn] - function that will be applied to get actions
+ * @param {Object} [actions] - all of the actions that the <code>mapFn</code> will be applied to
+ * @param {Function} backEndConf - Function that the token will be passed to.
+ * @param {Function} createElement - Function that will create the element
+ * @param {ReactElement} [Comp] - Component to wrap
  * @return {(props) => ReactElement}
  */
-export const withMappedActions = (mapFn, actions, backEndConf) => Component => {
+export const withMappedActions = (
+  mapFn,
+  actions,
+  backEndConf,
+  createElement
+) => Component => {
   const compName = Component.displayName || Component.name;
-  const WrapperComp = props => (
-    <Component {...props} actions={mapFn(actions, props, backEndConf)} />
-  );
+  const WrapperComp = props =>
+    createElement(
+      Component,
+      Object.assign({}, props, { actions: mapFn(actions, props, backEndConf) })
+    );
   WrapperComp.WrappedComponent = Component;
   WrapperComp.displayName = `withMappedActions(${compName})`;
   return hoistStatics(WrapperComp, Component);
