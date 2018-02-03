@@ -4,10 +4,25 @@
       "env",
       {
         "targets": {
-          "ie": 8
+          "browsers": ["ie >= 11"]
         },
-        "modules": false
+        "exclude": ["transform-async-to-generator", "transform-regenerator"],
+        "modules": false,
+        "loose": true
       }
     ]
-  ]
+  ],
+  "plugins": ["transform-object-rest-spread"],
+  "env": {
+    "commonjs": {
+      "presets": [
+        [
+          "env",
+          {
+            "loose": true
+          }
+        ]
+      ]
+    }
+  }
 }

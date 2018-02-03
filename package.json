@@ -4,9 +4,12 @@
   "description": "Utility set for redux",
   "main": "dist/index.js",
   "scripts": {
+    "test": "cross-env BABEL_ENV=commonjs jest",
+    "test:watch": "npm test -- --watch",
     "build:umd": "cross-env BABEL_ENV=es NODE_ENV=development rollup -c -o dist/redux-utilities.js",
     "build:umd:min": "cross-env BABEL_ENV=es NODE_ENV=production rollup -c -o dist/redux-utilities.min.js",
-    "build": "npm run build:umd && npm run build:umd:min"
+    "build": "npm run build:umd && npm run build:umd:min",
+    "lint": "eslint src/** --fix"
   },
   "repository": {
     "type": "git",
@@ -28,6 +31,13 @@
     "rollup-plugin-uglify": "^3.0.0"
   },
   "dependencies": {
-    "babel-preset-env": "^1.6.1"
+    "babel-plugin-transform-object-rest-spread": "^6.26.0",
+    "babel-preset-env": "^1.6.1",
+    "eslint": "^4.16.0",
+    "jest": "^22.1.4",
+    "yup": "^0.24.0"
+  },
+  "jest": {
+    "testRegex": "(/tests/.*\\.test.js)$"
   }
 }
