@@ -17,3 +17,16 @@ export function concat(list1, list2) {
 export function reduce(fn, initialValue, list) {
   return list.reduce(fn, initialValue);
 }
+
+export function validate(schema, data, options) {
+  if (process.env.NODE_ENV === 'production') {
+    return undefined;
+  }
+  let error;
+  try {
+    schema.validateSync(data, options);
+  } catch (e) {
+    error = e;
+  }
+  return error;
+}
