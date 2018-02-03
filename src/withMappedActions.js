@@ -5,7 +5,7 @@ import hoistStatics from 'hoist-non-react-statics';
  * @param  {Object} [props] - props taken from redux connect
  * @return {Object} - activated actions
  */
-export function mapActionsToBackend(actions, props, backEndConf) {
+export function mapActionsToBackEnd(actions, props, backEndConf) {
   const { token, dispatch } = props;
 
   if (!(actions instanceof Object) || Array.isArray(actions)) {

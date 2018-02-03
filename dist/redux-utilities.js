@@ -243,7 +243,25 @@ var hoistNonReactStatics = function hoistNonReactStatics(targetComponent, source
  * @param  {Object} [props] - props taken from redux connect
  * @return {Object} - activated actions
  */
+function mapActionsToBackEnd(actions, props, backEndConf) {
+  const { token, dispatch } = props;
 
+  if (!(actions instanceof Object) || Array.isArray(actions)) {
+    throw TypeError('Actions should be an object');
+  }
+  if (typeof token !== 'string') {
+    throw TypeError('Token string needs to be passed');
+  }
+  if (!dispatch || typeof dispatch !== 'function') {
+    throw TypeError('Dispatch should be a function');
+  }
+  const backEnd = backEndConf(token);
+  return Object.keys(actions).reduce((mappedActions, key) => {
+    // eslint-disable-next-line
+    mappedActions[key] = actions[key](backEnd, dispatch);
+    return mappedActions;
+  }, {});
+}
 /**
  * @param {Function} [mapFn] - function that will be applied to get actions
  * @param {Object} [actions] - all of the actions that the <code>mapFn</code> will be applied to
@@ -371,6 +389,7 @@ exports.applyReducer = applyReducer;
 exports.runActions = runActions;
 exports.flattenReducers = flattenReducers;
 exports.withMappedActions = withMappedActions;
+exports.mapActionsToBackEnd = mapActionsToBackEnd;
 exports.extendDefaultReducer = extendDefaultReducer;
 
 Object.defineProperty(exports, '__esModule', { value: true });
