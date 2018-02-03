@@ -34,6 +34,10 @@ function validate(schema, data, options) {
   return error;
 }
 
+function deepClone(val) {
+  return JSON.parse(JSON.stringify(val));
+}
+
 /**
  * @example
  *
@@ -81,9 +85,9 @@ function createReducer(cases, initialState = {}) {
  * @return {[key, reducer]} - reducer config that should be flatten with `flattenReducers`
  */
 function applyReducer(reducer) {
-  const error = validate(schema, reducer);
-  if (error) {
-    throw new Error(error.message);
+  const validation = validate(schema, reducer);
+  if (validation) {
+    throw new Error(validation.message);
   }
 
   return [reducer.key, createReducer(reducer.cases, reducer.initialState)];
@@ -265,11 +269,109 @@ const withMappedActions = (
   return hoistNonReactStatics(WrapperComp, Component);
 };
 
+const yup$1 = require('yup');
+/**
+ * @typedef {Object} options
+ * @prop {string} key
+ * @prop {Object} type
+ * @prop {Object} cases
+ * @prop {Object} initial
+ */
+const schema$1 = yup$1.object().shape({
+  key: yup$1.string().required(),
+  type: yup$1.object().required(),
+  initialState: yup$1.object(),
+  cases: yup$1.object(),
+});
+
+/**
+ * Extends default configuration of reducers to contain basic handlers
+ * (getAll, getSingle, loading, loadingDone, unmounted)
+ * (Keep in mind none of these reducers override the state as they expect usage of `applyReducer`)
+ * @param {options} [options]
+ * @param {Function} clone - Function to clone the inital object to allow clearing it later on
+ * @return {Object} []
+ */
+function extendDefaultReducer(config, clone = deepClone) {
+  const validation = validate(schema$1, config);
+  if (validation) {
+    throw new Error(validation.message);
+  }
+
+  const { key, type, cases } = config;
+  const givenState = config.initialState || {};
+
+  const initialState = Object.assign(
+    {
+      all: [],
+      current: {},
+      loading: true,
+      failed: false,
+      unmounted: false,
+    },
+    givenState
+  );
+
+  function getAll(state, { all }) {
+    return { all, loading: false, unmounted: false };
+  }
+
+  function getSingle(state, { current }) {
+    return {
+      current,
+      loading: false,
+      unmounted: false,
+    };
+  }
+
+  function loading(state, action) {
+    return { loading: true, unmounted: false };
+  }
+
+  function loadingDone(state, action) {
+    return { loading: false };
+  }
+
+  function unmounted(state, action) {
+    return { unmounted: true };
+  }
+
+  function failed(state, action) {
+    return {
+      loading: false,
+      failed: true,
+      unmounted: false,
+    };
+  }
+
+  function clear() {
+    return clone(initialState);
+  }
+
+  return {
+    key,
+    cases: Object.assign(
+      {
+        [type.GET_ALL]: getAll,
+        [type.GET_ONE]: getSingle,
+        [type.LOADING]: loading,
+        [type.LOADING_DONE]: loadingDone,
+        [type.UNMOUNT]: unmounted,
+        [type.FAILED]: failed,
+        [type.CLEAR]: clear,
+      },
+      cases
+    ),
+    initialState: clone(initialState),
+  };
+}
+
 exports.makeType = makeType;
 exports.applyReducer = applyReducer;
 exports.runActions = runActions;
 exports.flattenReducers = flattenReducers;
 exports.withMappedActions = withMappedActions;
+exports.extendDefaultReducer = extendDefaultReducer;
 
 Object.defineProperty(exports, '__esModule', { value: true });
 

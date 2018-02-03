@@ -28,9 +28,9 @@ function createReducer(cases, initialState = {}) {
  * @return {[key, reducer]} - reducer config that should be flatten with `flattenReducers`
  */
 export function applyReducer(reducer) {
-  const error = validate(schema, reducer);
-  if (error) {
-    throw new Error(error.message);
+  const validation = validate(schema, reducer);
+  if (validation) {
+    throw new Error(validation.message);
   }
 
   return [reducer.key, createReducer(reducer.cases, reducer.initialState)];

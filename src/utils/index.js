@@ -30,3 +30,7 @@ export function validate(schema, data, options) {
   }
   return error;
 }
+
+export function deepClone(val) {
+  return JSON.parse(JSON.stringify(val));
+}
