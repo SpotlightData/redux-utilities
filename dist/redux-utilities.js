@@ -25,7 +25,7 @@ function reduce(fn, initialValue, list) {
 }
 
 function validate(schema, data, options) {
-  let error;
+  var error = void 0;
   try {
     schema.validateSync(data, options);
   } catch (e) {
@@ -38,6 +38,116 @@ function deepClone(val) {
   return JSON.parse(JSON.stringify(val));
 }
 
+var asyncToGenerator = function (fn) {
+  return function () {
+    var gen = fn.apply(this, arguments);
+    return new Promise(function (resolve, reject) {
+      function step(key, arg) {
+        try {
+          var info = gen[key](arg);
+          var value = info.value;
+        } catch (error) {
+          reject(error);
+          return;
+        }
+
+        if (info.done) {
+          resolve(value);
+        } else {
+          return Promise.resolve(value).then(function (value) {
+            step("next", value);
+          }, function (err) {
+            step("throw", err);
+          });
+        }
+      }
+
+      return step("next");
+    });
+  };
+};
+
+
+
+
+
+
+
+
+
+var defineProperty = function (obj, key, value) {
+  if (key in obj) {
+    Object.defineProperty(obj, key, {
+      value: value,
+      enumerable: true,
+      configurable: true,
+      writable: true
+    });
+  } else {
+    obj[key] = value;
+  }
+
+  return obj;
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+var slicedToArray = function () {
+  function sliceIterator(arr, i) {
+    var _arr = [];
+    var _n = true;
+    var _d = false;
+    var _e = undefined;
+
+    try {
+      for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) {
+        _arr.push(_s.value);
+
+        if (i && _arr.length === i) break;
+      }
+    } catch (err) {
+      _d = true;
+      _e = err;
+    } finally {
+      try {
+        if (!_n && _i["return"]) _i["return"]();
+      } finally {
+        if (_d) throw _e;
+      }
+    }
+
+    return _arr;
+  }
+
+  return function (arr, i) {
+    if (Array.isArray(arr)) {
+      return arr;
+    } else if (Symbol.iterator in Object(arr)) {
+      return sliceIterator(arr, i);
+    } else {
+      throw new TypeError("Invalid attempt to destructure non-iterable instance");
+    }
+  };
+}();
+
 /**
  * @example
  *
@@ -49,20 +159,20 @@ function deepClone(val) {
  * @param {string[]} [defaultTypes] - Types to be concatinated with passed types
  * @return Object
  */
-function makeType(prefix, types, defaultTypes = []) {
-  return reduce(
-    (dict, type) => Object.assign({ [type]: `${prefix}_${type}` }, dict),
-    {},
-    concat(types, defaultTypes)
-  );
+function makeType(prefix, types) {
+  var defaultTypes = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : [];
+
+  return reduce(function (dict, type) {
+    return Object.assign(defineProperty({}, type, prefix + '_' + type), dict);
+  }, {}, concat(types, defaultTypes));
 }
 
-const yup = require('yup');
+var yup = require('yup');
 
-const schema = yup.object().shape({
+var schema = yup.object().shape({
   key: yup.string().required(),
   cases: yup.object().required(),
-  initialState: yup.object(),
+  initialState: yup.object()
 });
 
 /**
@@ -70,12 +180,17 @@ const schema = yup.object().shape({
  * @param  {Object} [initialState={}]
  * @return {(state: Object, action: Object): Object} basic reducer
  */
-function createReducer(cases, initialState = {}) {
-  return (state = initialState, action) => {
+function createReducer(cases) {
+  var initialState = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+
+  return function () {
+    var state = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : initialState;
+    var action = arguments[1];
+
     if (cases[action.type] === undefined) {
       return state;
     }
-    const newState = cases[action.type](state, action);
+    var newState = cases[action.type](state, action);
     return Object.assign({}, state, newState);
   };
 }
@@ -85,7 +200,7 @@ function createReducer(cases, initialState = {}) {
  * @return {[key, reducer]} - reducer config that should be flatten with `flattenReducers`
  */
 function applyReducer(reducer) {
-  const validation = validate(schema, reducer);
+  var validation = validate(schema, reducer);
   if (validation) {
     throw new Error(validation.message);
   }
@@ -97,29 +212,75 @@ function applyReducer(reducer) {
  * @param {{ open: Function }} handler - handler that will be used to show the error
  * @param {(() => promise)[]} actions - Actions to be ran
  */
-async function runActionsSeq(handler, actions, shouldNotify) {
-  const action = actions.shift();
-  const resp = await action();
-  if (resp._error && shouldNotify) {
-    handler.open(resp);
-  }
-  runActionsSeq(handler, actions);
-  return undefined;
-}
+var runActionsSeq = function () {
+  var _ref = asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee(handler, actions, shouldNotify) {
+    var action, resp;
+    return regeneratorRuntime.wrap(function _callee$(_context) {
+      while (1) {
+        switch (_context.prev = _context.next) {
+          case 0:
+            action = actions.shift();
+            _context.next = 3;
+            return action();
+
+          case 3:
+            resp = _context.sent;
+
+            if (resp._error && shouldNotify) {
+              handler.open(resp);
+            }
+            runActionsSeq(handler, actions);
+            return _context.abrupt('return', undefined);
+
+          case 7:
+          case 'end':
+            return _context.stop();
+        }
+      }
+    }, _callee, this);
+  }));
+
+  return function runActionsSeq(_x, _x2, _x3) {
+    return _ref.apply(this, arguments);
+  };
+}();
 
 /**
  * @param {{ open: Function }} handler - handler that will be used to show the error
  * @param {promise[]} actions - Actions to be ran
  */
-async function runActionsAsync(handler, actions, shouldNotify) {
-  const reqs = await Promise.all(actions);
-  reqs.map(resp => {
-    if (resp._error && shouldNotify) {
-      handler.open(resp);
-    }
-    return undefined;
-  });
-}
+var runActionsAsync = function () {
+  var _ref2 = asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee2(handler, actions, shouldNotify) {
+    var reqs;
+    return regeneratorRuntime.wrap(function _callee2$(_context2) {
+      while (1) {
+        switch (_context2.prev = _context2.next) {
+          case 0:
+            _context2.next = 2;
+            return Promise.all(actions);
+
+          case 2:
+            reqs = _context2.sent;
+
+            reqs.map(function (resp) {
+              if (resp._error && shouldNotify) {
+                handler.open(resp);
+              }
+              return undefined;
+            });
+
+          case 4:
+          case 'end':
+            return _context2.stop();
+        }
+      }
+    }, _callee2, this);
+  }));
+
+  return function runActionsAsync(_x4, _x5, _x6) {
+    return _ref2.apply(this, arguments);
+  };
+}();
 /**
  * A wrapper for running redux actions. It helps to quickly notify user of any problems that occur with minimal effort.
  * If it's not syncronous:
@@ -145,14 +306,16 @@ async function runActionsAsync(handler, actions, shouldNotify) {
  * @param {bool} [shouldNotify=true] - Whether handler should be called if error occurs
  * @return {Functions}
  */
-function runActions(handler, shouldNotify = true) {
+function runActions(handler) {
+  var shouldNotify = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : true;
+
   if (typeof handler.open !== 'function') {
     throw TypeError('Expected handler.open to be a function');
   }
-  return (actions, isSync = false) =>
-    isSync
-      ? runActionsSeq(handler, actions, shouldNotify)
-      : runActionsAsync(handler, actions, shouldNotify);
+  return function (actions) {
+    var isSync = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : false;
+    return isSync ? runActionsSeq(handler, actions, shouldNotify) : runActionsAsync(handler, actions, shouldNotify);
+  };
 }
 
 /**
@@ -161,17 +324,17 @@ function runActions(handler, shouldNotify = true) {
  * @param {[string, Function][]} reducers
  */
 function flattenReducers(reducers) {
-  return reduce(
-    (dict, entry) => {
-      const [key, handler] = entry;
-      // Normally we'd use Object.assign, but here it would slow it down, and we don't care about overrides
-      // eslint-disable-next-line
-      dict[key] = handler;
-      return dict;
-    },
-    {},
-    reducers
-  );
+  return reduce(function (dict, entry) {
+    var _entry = slicedToArray(entry, 2),
+        key = _entry[0],
+        handler = _entry[1];
+    // Normally we'd use Object.assign, but here it would slow it down, and we don't care about overrides
+    // eslint-disable-next-line
+
+
+    dict[key] = handler;
+    return dict;
+  }, {}, reducers);
 }
 
 /**
@@ -190,16 +353,16 @@ var REACT_STATICS = {
 };
 
 var KNOWN_STATICS = {
-  name: true,
-  length: true,
-  prototype: true,
-  caller: true,
-  callee: true,
-  arguments: true,
-  arity: true
+    name: true,
+    length: true,
+    prototype: true,
+    caller: true,
+    callee: true,
+    arguments: true,
+    arity: true
 };
 
-var defineProperty = Object.defineProperty;
+var defineProperty$1 = Object.defineProperty;
 var getOwnPropertyNames = Object.getOwnPropertyNames;
 var getOwnPropertySymbols = Object.getOwnPropertySymbols;
 var getOwnPropertyDescriptor = Object.getOwnPropertyDescriptor;
@@ -207,7 +370,8 @@ var getPrototypeOf = Object.getPrototypeOf;
 var objectPrototype = getPrototypeOf && getPrototypeOf(Object);
 
 var hoistNonReactStatics = function hoistNonReactStatics(targetComponent, sourceComponent, blacklist) {
-    if (typeof sourceComponent !== 'string') { // don't hoist over string (html) components
+    if (typeof sourceComponent !== 'string') {
+        // don't hoist over string (html) components
 
         if (objectPrototype) {
             var inheritedComponent = getPrototypeOf(sourceComponent);
@@ -226,8 +390,9 @@ var hoistNonReactStatics = function hoistNonReactStatics(targetComponent, source
             var key = keys[i];
             if (!REACT_STATICS[key] && !KNOWN_STATICS[key] && (!blacklist || !blacklist[key])) {
                 var descriptor = getOwnPropertyDescriptor(sourceComponent, key);
-                try { // Avoid failures from read-only properties
-                    defineProperty(targetComponent, key, descriptor);
+                try {
+                    // Avoid failures from read-only properties
+                    defineProperty$1(targetComponent, key, descriptor);
                 } catch (e) {}
             }
         }
@@ -244,7 +409,9 @@ var hoistNonReactStatics = function hoistNonReactStatics(targetComponent, source
  * @return {Object} - activated actions
  */
 function mapActionsToBackEnd(actions, props, backEndConf) {
-  const { token, dispatch } = props;
+  var token = props.token,
+      dispatch = props.dispatch;
+
 
   if (!(actions instanceof Object) || Array.isArray(actions)) {
     throw TypeError('Actions should be an object');
@@ -255,8 +422,8 @@ function mapActionsToBackEnd(actions, props, backEndConf) {
   if (!dispatch || typeof dispatch !== 'function') {
     throw TypeError('Dispatch should be a function');
   }
-  const backEnd = backEndConf(token);
-  return Object.keys(actions).reduce((mappedActions, key) => {
+  var backEnd = backEndConf(token);
+  return Object.keys(actions).reduce(function (mappedActions, key) {
     // eslint-disable-next-line
     mappedActions[key] = actions[key](backEnd, dispatch);
     return mappedActions;
@@ -270,24 +437,19 @@ function mapActionsToBackEnd(actions, props, backEndConf) {
  * @param {ReactElement} [Comp] - Component to wrap
  * @return {(props) => ReactElement}
  */
-const withMappedActions = (
-  mapFn,
-  actions,
-  backEndConf,
-  createElement
-) => Component => {
-  const compName = Component.displayName || Component.name;
-  const WrapperComp = props =>
-    createElement(
-      Component,
-      Object.assign({}, props, { actions: mapFn(actions, props, backEndConf) })
-    );
-  WrapperComp.WrappedComponent = Component;
-  WrapperComp.displayName = `withMappedActions(${compName})`;
-  return hoistNonReactStatics(WrapperComp, Component);
+var withMappedActions = function withMappedActions(mapFn, actions, backEndConf, createElement) {
+  return function (Component) {
+    var compName = Component.displayName || Component.name;
+    var WrapperComp = function WrapperComp(props) {
+      return createElement(Component, Object.assign({}, props, { actions: mapFn(actions, props, backEndConf) }));
+    };
+    WrapperComp.WrappedComponent = Component;
+    WrapperComp.displayName = 'withMappedActions(' + compName + ')';
+    return hoistNonReactStatics(WrapperComp, Component);
+  };
 };
 
-const yup$1 = require('yup');
+var yup$1 = require('yup');
 /**
  * @typedef {Object} options
  * @prop {string} key
@@ -295,11 +457,11 @@ const yup$1 = require('yup');
  * @prop {Object} cases
  * @prop {Object} initial
  */
-const schema$1 = yup$1.object().shape({
+var schema$1 = yup$1.object().shape({
   key: yup$1.string().required(),
   type: yup$1.object().required(),
   initialState: yup$1.object(),
-  cases: yup$1.object(),
+  cases: yup$1.object()
 });
 
 /**
@@ -310,35 +472,43 @@ const schema$1 = yup$1.object().shape({
  * @param {Function} clone - Function to clone the inital object to allow clearing it later on
  * @return {Object} []
  */
-function extendDefaultReducer(config, clone = deepClone) {
-  const validation = validate(schema$1, config);
+function extendDefaultReducer(config) {
+  var _Object$assign;
+
+  var clone = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : deepClone;
+
+  var validation = validate(schema$1, config);
   if (validation) {
     throw new Error(validation.message);
   }
 
-  const { key, type, cases } = config;
-  const givenState = config.initialState || {};
+  var key = config.key,
+      type = config.type,
+      cases = config.cases;
 
-  const initialState = Object.assign(
-    {
-      all: [],
-      current: {},
-      loading: true,
-      failed: false,
-      unmounted: false,
-    },
-    givenState
-  );
+  var givenState = config.initialState || {};
 
-  function getAll(state, { all }) {
-    return { all, loading: false, unmounted: false };
+  var initialState = Object.assign({
+    all: [],
+    current: {},
+    loading: true,
+    failed: false,
+    unmounted: false
+  }, givenState);
+
+  function getAll(state, _ref) {
+    var all = _ref.all;
+
+    return { all: all, loading: false, unmounted: false };
   }
 
-  function getSingle(state, { current }) {
+  function getSingle(state, _ref2) {
+    var current = _ref2.current;
+
     return {
-      current,
+      current: current,
       loading: false,
-      unmounted: false,
+      unmounted: false
     };
   }
 
@@ -358,7 +528,7 @@ function extendDefaultReducer(config, clone = deepClone) {
     return {
       loading: false,
       failed: true,
-      unmounted: false,
+      unmounted: false
     };
   }
 
@@ -367,20 +537,9 @@ function extendDefaultReducer(config, clone = deepClone) {
   }
 
   return {
-    key,
-    cases: Object.assign(
-      {
-        [type.GET_ALL]: getAll,
-        [type.GET_ONE]: getSingle,
-        [type.LOADING]: loading,
-        [type.LOADING_DONE]: loadingDone,
-        [type.UNMOUNT]: unmounted,
-        [type.FAILED]: failed,
-        [type.CLEAR]: clear,
-      },
-      cases
-    ),
-    initialState: clone(initialState),
+    key: key,
+    cases: Object.assign((_Object$assign = {}, defineProperty(_Object$assign, type.GET_ALL, getAll), defineProperty(_Object$assign, type.GET_ONE, getSingle), defineProperty(_Object$assign, type.LOADING, loading), defineProperty(_Object$assign, type.LOADING_DONE, loadingDone), defineProperty(_Object$assign, type.UNMOUNT, unmounted), defineProperty(_Object$assign, type.FAILED, failed), defineProperty(_Object$assign, type.CLEAR, clear), _Object$assign), cases),
+    initialState: clone(initialState)
   };
 }
 

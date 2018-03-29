@@ -36,6 +36,7 @@ if (env === 'development' || env === 'production') {
     }),
     replace({ 'process.env.NODE_ENV': JSON.stringify(env) })
   );
+  config.plugins.push(babel({ plugins: ['external-helpers'] }));
 }
 
 if (env === 'production') {

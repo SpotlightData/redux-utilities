@@ -6,10 +6,8 @@
   "scripts": {
     "test": "cross-env BABEL_ENV=commonjs jest",
     "test:watch": "npm test -- --watch",
-    "build:umd":
-      "cross-env BABEL_ENV=es NODE_ENV=development rollup -c -o dist/redux-utilities.js",
-    "build:umd:min":
-      "cross-env BABEL_ENV=es NODE_ENV=production rollup -c -o dist/redux-utilities.min.js",
+    "build:umd": "cross-env BABEL_ENV=es NODE_ENV=development rollup -c -o dist/redux-utilities.js",
+    "build:umd:min": "cross-env BABEL_ENV=es NODE_ENV=production rollup -c -o dist/redux-utilities.min.js",
     "build": "npm run build:umd && npm run build:umd:min",
     "lint": "eslint src/** --fix",
     "prepublishOnly": "npm run build"
@@ -39,6 +37,8 @@
     "jest": "^22.1.4"
   },
   "dependencies": {
+    "babel-plugin-external-helpers": "^6.22.0",
+    "babel-plugin-transform-es2015-arrow-functions": "^6.22.0",
     "hoist-non-react-statics": "^2.3.1",
     "yup": "^0.24.0"
   },

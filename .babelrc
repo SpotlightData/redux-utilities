@@ -4,25 +4,12 @@
       "env",
       {
         "targets": {
-          "browsers": ["ie >= 11"]
+          "ie": 8
         },
-        "exclude": ["transform-async-to-generator", "transform-regenerator"],
-        "modules": false,
-        "loose": true
+        "include": ["transform-es2015-arrow-functions"],
+        "modules": false
       }
     ]
   ],
-  "plugins": ["transform-object-rest-spread"],
-  "env": {
-    "commonjs": {
-      "presets": [
-        [
-          "env",
-          {
-            "loose": true
-          }
-        ]
-      ]
-    }
-  }
+  "plugins": ["transform-object-rest-spread", "external-helpers"]
 }
