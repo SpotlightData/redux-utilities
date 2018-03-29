@@ -1,13 +1,15 @@
 {
   "name": "redux-utilities",
-  "version": "1.0.2",
+  "version": "1.0.5",
   "description": "Utility set for redux",
   "main": "dist/index.js",
   "scripts": {
     "test": "cross-env BABEL_ENV=commonjs jest",
     "test:watch": "npm test -- --watch",
-    "build:umd": "cross-env BABEL_ENV=es NODE_ENV=development rollup -c -o dist/redux-utilities.js",
-    "build:umd:min": "cross-env BABEL_ENV=es NODE_ENV=production rollup -c -o dist/redux-utilities.min.js",
+    "build:umd":
+      "cross-env BABEL_ENV=es NODE_ENV=development rollup -c -o dist/redux-utilities.js",
+    "build:umd:min":
+      "cross-env BABEL_ENV=es NODE_ENV=production rollup -c -o dist/redux-utilities.min.js",
     "build": "npm run build:umd && npm run build:umd:min",
     "lint": "eslint src/** --fix",
     "prepublishOnly": "npm run build"
