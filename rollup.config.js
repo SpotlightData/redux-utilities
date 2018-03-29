@@ -3,6 +3,7 @@ import babel from 'rollup-plugin-babel';
 import replace from 'rollup-plugin-replace';
 import uglify from 'rollup-plugin-uglify';
 import commonjs from 'rollup-plugin-commonjs';
+import babelRuntimeExternal from 'rollup-plugin-babel-runtime-external';
 
 const env = process.env.NODE_ENV;
 const config = {
@@ -36,7 +37,12 @@ if (env === 'development' || env === 'production') {
     }),
     replace({ 'process.env.NODE_ENV': JSON.stringify(env) })
   );
-  config.plugins.push(babel({ plugins: ['external-helpers'] }));
+  config.plugins.push(
+    babel({
+      plugins: ['external-helpers'],
+      // runtimeHelpers: true,
+    })
+  );
 }
 
 if (env === 'production') {

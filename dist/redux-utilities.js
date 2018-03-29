@@ -38,43 +38,6 @@ function deepClone(val) {
   return JSON.parse(JSON.stringify(val));
 }
 
-var asyncToGenerator = function (fn) {
-  return function () {
-    var gen = fn.apply(this, arguments);
-    return new Promise(function (resolve, reject) {
-      function step(key, arg) {
-        try {
-          var info = gen[key](arg);
-          var value = info.value;
-        } catch (error) {
-          reject(error);
-          return;
-        }
-
-        if (info.done) {
-          resolve(value);
-        } else {
-          return Promise.resolve(value).then(function (value) {
-            step("next", value);
-          }, function (err) {
-            step("throw", err);
-          });
-        }
-      }
-
-      return step("next");
-    });
-  };
-};
-
-
-
-
-
-
-
-
-
 var defineProperty = function (obj, key, value) {
   if (key in obj) {
     Object.defineProperty(obj, key, {
@@ -208,79 +171,72 @@ function applyReducer(reducer) {
   return [reducer.key, createReducer(reducer.cases, reducer.initialState)];
 }
 
-/**
- * @param {{ open: Function }} handler - handler that will be used to show the error
- * @param {(() => promise)[]} actions - Actions to be ran
- */
-var runActionsSeq = function () {
-  var _ref = asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee(handler, actions, shouldNotify) {
-    var action, resp;
-    return regeneratorRuntime.wrap(function _callee$(_context) {
-      while (1) {
-        switch (_context.prev = _context.next) {
-          case 0:
-            action = actions.shift();
-            _context.next = 3;
-            return action();
-
-          case 3:
-            resp = _context.sent;
-
-            if (resp._error && shouldNotify) {
-              handler.open(resp);
-            }
-            runActionsSeq(handler, actions);
-            return _context.abrupt('return', undefined);
-
-          case 7:
-          case 'end':
-            return _context.stop();
-        }
+function _await(value, then, direct) {
+  if (direct) {
+    return then ? then(value) : value;
+  }value = Promise.resolve(value);return then ? value.then(then) : value;
+}var _async = function () {
+  try {
+    if (isNaN.apply(null, {})) {
+      return function (f) {
+        return function () {
+          try {
+            return Promise.resolve(f.apply(this, arguments));
+          } catch (e) {
+            return Promise.reject(e);
+          }
+        };
+      };
+    }
+  } catch (e) {}return function (f) {
+    // Pre-ES5.1 JavaScript runtimes don't accept array-likes in Function.apply
+    return function () {
+      try {
+        return Promise.resolve(f.apply(this, Array.prototype.slice.call(arguments)));
+      } catch (e) {
+        return Promise.reject(e);
       }
-    }, _callee, this);
-  }));
-
-  return function runActionsSeq(_x, _x2, _x3) {
-    return _ref.apply(this, arguments);
+    };
   };
-}();
+}();function _call(body, then, direct) {
+  if (direct) {
+    return then ? then(body()) : body();
+  }try {
+    var result = body();if (!result || !result.then) {
+      result = Promise.resolve(result);
+    }return then ? result.then(then) : result;
+  } catch (e) {
+    return Promise.reject(e);
+  }
+} /**
+   * @param {{ open: Function }} handler - handler that will be used to show the error
+   * @param {(() => promise)[]} actions - Actions to be ran
+   */
+var runActionsSeq = _async(function (handler, actions, shouldNotify) {
+  var action = actions.shift();
+  return _call(action, function (resp) {
+    if (resp._error && shouldNotify) {
+      handler.open(resp);
+    }
+    runActionsSeq(handler, actions);
+    return undefined;
+  });
+});
 
 /**
  * @param {{ open: Function }} handler - handler that will be used to show the error
  * @param {promise[]} actions - Actions to be ran
  */
-var runActionsAsync = function () {
-  var _ref2 = asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee2(handler, actions, shouldNotify) {
-    var reqs;
-    return regeneratorRuntime.wrap(function _callee2$(_context2) {
-      while (1) {
-        switch (_context2.prev = _context2.next) {
-          case 0:
-            _context2.next = 2;
-            return Promise.all(actions);
-
-          case 2:
-            reqs = _context2.sent;
-
-            reqs.map(function (resp) {
-              if (resp._error && shouldNotify) {
-                handler.open(resp);
-              }
-              return undefined;
-            });
-
-          case 4:
-          case 'end':
-            return _context2.stop();
-        }
+var runActionsAsync = _async(function (handler, actions, shouldNotify) {
+  return _await(Promise.all(actions), function (reqs) {
+    reqs.map(function (resp) {
+      if (resp._error && shouldNotify) {
+        handler.open(resp);
       }
-    }, _callee2, this);
-  }));
-
-  return function runActionsAsync(_x4, _x5, _x6) {
-    return _ref2.apply(this, arguments);
-  };
-}();
+      return undefined;
+    });
+  });
+});
 /**
  * A wrapper for running redux actions. It helps to quickly notify user of any problems that occur with minimal effort.
  * If it's not syncronous:
