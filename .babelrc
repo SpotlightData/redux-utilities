@@ -1,19 +1,16 @@
 {
   "presets": [
     [
-      "env",
+      "@babel/preset-env",
       {
         "targets": {
-          "ie": 8
+          "ie": 11
         },
-        "include": ["transform-es2015-arrow-functions"],
+        "loose": true,
         "modules": false
       }
-    ]
-  ],
-  "plugins": [
-    "transform-object-rest-spread",
-    "external-helpers",
-    "transform-async-to-promises"
+    ],
+    "@babel/preset-stage-1",
+    "@babel/preset-react"
   ]
 }
